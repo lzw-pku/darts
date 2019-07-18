@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from architect import Architect
-
+from tensorflow.nn import conv2d
 import gc
 
 import data
@@ -241,7 +241,7 @@ def train():
         if batch % args.log_interval == 0 and batch > 0:
             logging.info(parallel_model.genotype())
             print(F.softmax(parallel_model.weights, dim=-1))
-            cur_loss = total_loss[0] / args.log_interval
+            cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
             logging.info('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
