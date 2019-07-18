@@ -3,7 +3,7 @@ import torch.nn as nn
 import os, shutil
 import numpy as np
 from torch.autograd import Variable
-import torch.functional as F
+import torch.nn.functional as F
 
 def repackage_hidden(h):
     if isinstance(h, Variable):
