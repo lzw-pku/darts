@@ -14,10 +14,10 @@ class LinearLowRank(nn.Module):
     def __init__(self, row, col):
         torch.nn.Module.__init__(self)
         rank = min(row, col)
-        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
-        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
+        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE)).cuda()
+        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE)).cuda()
         if row > col:
-            self.pad = torch.zeros(row - col, dtype=self.sigma.dtype, requires_grad=False)
+            self.pad = torch.zeros(row - col, dtype=self.sigma.dtype, requires_grad=False).cuda()
             def dot(input):
                 pad_sig = torch.cat([self.sigma, self.pad])
                 return input * pad_sig
@@ -29,7 +29,7 @@ class LinearLowRank(nn.Module):
             self.dot = dot
         else:
             self.dot = lambda x: x * self.sigma
-        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE))
+        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE)).cuda()
 
     def forward(self, input):
         #print(input.size())
