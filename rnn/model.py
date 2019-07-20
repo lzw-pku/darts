@@ -66,7 +66,7 @@ class DARTSCell(nn.Module):
     ])
     '''
     self._W0 = LinearLowRank(ninp+nhid, 2*nhid)
-    self._Ws = [LinearLowRank(nhid, 2*nhid) for i in range(steps)]
+    self._Ws = nn.ModuleList([LinearLowRank(nhid, 2*nhid) for i in range(steps)])
 
   def forward(self, inputs, hidden):
     T, B = inputs.size(0), inputs.size(1)
