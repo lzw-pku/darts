@@ -86,7 +86,7 @@ class DARTSCell(nn.Module):
       hidden = self.cell(inputs[t], hidden, x_mask, h_mask)
       hiddens.append(hidden)
     hiddens = torch.stack(hiddens)
-    return hiddens, hiddens[-1].unsqueeze(0)
+    return hiddens, hiddens[-1].unsqueeze(0),
 
   def _compute_init_state(self, x, h_prev, x_mask, h_mask):
     if self.training:
@@ -131,6 +131,10 @@ class DARTSCell(nn.Module):
     output = torch.mean(torch.stack([states[i] for i in self.genotype.concat], -1), -1)
     return output
 
+  def regular(self):
+      sparse = sum([w.sparse() for w in self._Ws]) + self._W0.sparse()
+      orth = sum([w.orth() for w in self._Ws]) + self._W0.orth()
+      return sparse, orth
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""

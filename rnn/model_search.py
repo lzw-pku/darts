@@ -42,7 +42,6 @@ class DARTSCellSearch(DARTSCell):
     output = torch.mean(states[-CONCAT:], dim=0)
     return output
 
-
 class RNNModelSearch(RNNModel):
 
     def __init__(self, *args):

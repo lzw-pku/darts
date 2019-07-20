@@ -14,7 +14,7 @@ import gc
 
 import data
 import model_search as model
-
+import random
 from utils import batchify, get_batch, repackage_hidden, create_exp_dir, save_checkpoint
 
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank/WikiText2 Language Model')
@@ -77,6 +77,10 @@ parser.add_argument('--unrolled', action='store_true', default=False, help='use 
 parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
+                    help='learning rate for the architecture encoding alpha')
+parser.add_argument('--sparse_amount', type=float, default=1e-4,
+                    help='learning rate for the architecture encoding alpha')
+parser.add_argument('--orth_amount', type=float, default=1e-4,
                     help='learning rate for the architecture encoding alpha')
 args = parser.parse_args()
 
@@ -215,8 +219,10 @@ def train():
 
             log_prob, hidden[s_id], rnn_hs, dropped_rnn_hs = parallel_model(cur_data, hidden[s_id], return_h=True)
             raw_loss = nn.functional.nll_loss(log_prob.view(-1, log_prob.size(2)), cur_targets)
-
-            loss = raw_loss
+            sparse_loss, orth_loss = parallel_model.regular()
+            if random.random() < 0.1:
+                print(sparse_loss, orth_loss)
+            loss = raw_loss + args.sparse_amount * sparse_loss + args.orth_amount * orth_loss
             # Activiation Regularization
             if args.alpha > 0:
               loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
