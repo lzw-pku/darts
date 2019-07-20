@@ -24,8 +24,10 @@ class LinearLowRank(nn.Module):
             self.dot = dot
         elif row < col:
             def dot(input):
-                return (input * self.sigma).view(
-                    -1, input.size()[-1])[::, :col].view(list(input.size())[:-1]+[col])
+                tmp = (input * self.sigma).view(-1, input.size()[-1])
+                zeros = torch.zeros([tmp.size(0), col - row]).cuda()
+                pad = torch.cat([tmp, zeros], dim=1)
+                return pad.view(list(input.size())[:-1]+[col])
             self.dot = dot
         else:
             self.dot = lambda x: x * self.sigma
