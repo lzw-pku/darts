@@ -10,6 +10,41 @@ from torch.autograd import Variable
 
 INITRANGE = 0.04
 
+class LinearLowRank(nn.Module):
+    def __init__(self, row, col):
+        torch.nn.Module.__init__(self)
+        rank = min(row, col)
+        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
+        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
+        if row > col:
+            self.pad = torch.zeros(row - col, dtype=self.sigma.dtype, requires_grad=False)
+            def dot(input):
+                pad_sig = torch.cat([self.sigma, self.pad])
+                return input * pad_sig
+            self.dot = dot
+        elif row < col:
+            def dot(input):
+                return (input * self.sigma).view(
+                    -1, input.size()[-1])[::, :col].view(list(input.size())[:-1]+[col])
+            self.dot = dot
+        else:
+            self.dot = lambda x: x * self.sigma
+        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE))
+
+    def forward(self, input):
+        t1 = input * self.U
+        t2 = self.dot(t1)
+        t3 = t2 * self.V
+        return t3
+
+    def sparse(self):
+        return torch.sum(torch.abs(self.sigma))
+
+    def orth(self):
+        def compute(u):
+            return (u.transpose(1, 0).mm(u) - torch.eye(u.size(0)).cuda()).norm(2)
+        return compute(self.U) + compute(self.V)
+        #return (self.U.weight.transpose(1, 0).mm(self.U.weight) - torch.eye(self.U.weight.size(0)).cuda()).norm(2)
 
 class DARTSCell(nn.Module):
 
@@ -22,9 +57,15 @@ class DARTSCell(nn.Module):
 
     # genotype is None when doing arch search
     steps = len(self.genotype.recurrent) if self.genotype is not None else STEPS
+    '''
     self._W0 = nn.Parameter(torch.Tensor(ninp+nhid, 2*nhid).uniform_(-INITRANGE, INITRANGE))
     self._Ws = nn.ParameterList([
         nn.Parameter(torch.Tensor(nhid, 2*nhid).uniform_(-INITRANGE, INITRANGE)) for i in range(steps)
+    ])
+    '''
+    self._W0 = LinearLowRank(ninp+nhid, 2*nhid)
+    self._Ws = nn.ParameterList([
+        LinearLowRank(nhid, 2*nhid) for i in range(steps)
     ])
 
   def forward(self, inputs, hidden):
@@ -49,7 +90,7 @@ class DARTSCell(nn.Module):
       xh_prev = torch.cat([x * x_mask, h_prev * h_mask], dim=-1)
     else:
       xh_prev = torch.cat([x, h_prev], dim=-1)
-    c0, h0 = torch.split(xh_prev.mm(self._W0), self.nhid, dim=-1)
+    c0, h0 = torch.split(self._W0(xh_prev), self.nhid, dim=-1) # !!!!!!!!!!!!!!!!!!!!!
     c0 = c0.sigmoid()
     h0 = h0.tanh()
     s0 = h_prev + c0 * (h0-h_prev)
@@ -75,9 +116,9 @@ class DARTSCell(nn.Module):
     for i, (name, pred) in enumerate(self.genotype.recurrent):
       s_prev = states[pred]
       if self.training:
-        ch = (s_prev * h_mask).mm(self._Ws[i])
+        ch = self._Ws[i](s_prev * h_mask)  # !!!!!!!!!!!!!!!!!!
       else:
-        ch = s_prev.mm(self._Ws[i])
+        ch = self._Ws[i](s_prev) # !!!!!!!!!!!!!!!!!!!!!!!!!
       c, h = torch.split(ch, self.nhid, dim=-1)
       c = c.sigmoid()
       fn = self._get_activation(name)
