@@ -32,6 +32,9 @@ class LinearLowRank(nn.Module):
         self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE))
 
     def forward(self, input):
+        print(input.size())
+        print(self.U.size())
+        print(self.V.size())
         t1 = input * self.U
         t2 = self.dot(t1)
         t3 = t2 * self.V
