@@ -207,4 +207,7 @@ class RNNModel(nn.Module):
       return [Variable(weight.new(1, bsz, self.nhid).zero_())]
 
     def regular(self):
-        return sum([cell.regular() for cell in self.rnns])
+        s = [cell.regular() for cell in self.rnns]
+        sparse = sum(t[0] for t in s)
+        orth = sum(t[1] for t in s)
+        return sparse, orth
