@@ -50,7 +50,7 @@ parser.add_argument('--seed', type=int, default=3,
                     help='random seed')
 parser.add_argument('--nonmono', type=int, default=5,
                     help='random seed')
-parser.add_argument('--cuda', action='store_false',
+parser.add_argument('--cuda', action='store_false', default=True,
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                     help='report interval')
@@ -144,6 +144,7 @@ if args.cuda:
         parallel_model = nn.DataParallel(model, dim=1).cuda()
 else:
     parallel_model = model
+print(type(parallel_model.rnns[0]._W0), type(parallel_model.rnns[0]._Ws[0]))
 architect = Architect(parallel_model, args)
 
 total_params = sum(x.data.nelement() for x in model.parameters())

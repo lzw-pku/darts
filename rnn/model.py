@@ -14,8 +14,8 @@ class LinearLowRank(nn.Module):
     def __init__(self, row, col):
         torch.nn.Module.__init__(self)
         rank = min(row, col)
-        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE)).cuda()
-        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE)).cuda()
+        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
+        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
         if row > col:
             self.pad = torch.zeros(row - col, dtype=self.sigma.dtype, requires_grad=False).cuda()
             def dot(input):
@@ -34,9 +34,6 @@ class LinearLowRank(nn.Module):
         self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE)).cuda()
 
     def forward(self, input):
-        #print(input.size())
-        #print(self.U.size())
-        #print(self.V.size())
         t1 = input.mm(self.U)
         t2 = self.dot(t1)
         t3 = t2.mm(self.V)
