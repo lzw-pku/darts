@@ -206,3 +206,5 @@ class RNNModel(nn.Module):
       weight = next(self.parameters()).data
       return [Variable(weight.new(1, bsz, self.nhid).zero_())]
 
+    def regular(self):
+        return sum([cell.regular() for cell in self.rnns])
