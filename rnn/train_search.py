@@ -78,7 +78,7 @@ parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
                     help='learning rate for the architecture encoding alpha')
-parser.add_argument('--sparse_amount', type=float, default=1e-4,
+parser.add_argument('--sparse_amount', type=float, default=2e-2,
                     help='learning rate for the architecture encoding alpha')
 parser.add_argument('--orth_amount', type=float, default=1e-4,
                     help='learning rate for the architecture encoding alpha')
@@ -144,7 +144,7 @@ if args.cuda:
         parallel_model = nn.DataParallel(model, dim=1).cuda()
 else:
     parallel_model = model
-print(type(parallel_model.rnns[0]._W0), type(parallel_model.rnns[0]._Ws[0]))
+print(parallel_model.rnns[0]._W0.U.device, parallel_model.rnns[0]._Ws[0].U.device)
 architect = Architect(parallel_model, args)
 
 total_params = sum(x.data.nelement() for x in model.parameters())
@@ -222,7 +222,7 @@ def train():
             raw_loss = nn.functional.nll_loss(log_prob.view(-1, log_prob.size(2)), cur_targets)
             sparse_loss, orth_loss = parallel_model.regular()
             if random.random() < 0.1:
-                print(sparse_loss, orth_loss)
+                print(sparse_loss, orth_loss, raw_loss)
             loss = raw_loss + args.sparse_amount * sparse_loss + args.orth_amount * orth_loss
             # Activiation Regularization
             if args.alpha > 0:
