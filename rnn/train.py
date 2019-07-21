@@ -248,8 +248,9 @@ try:
     epoch = 1
     while epoch < args.epochs + 1:
         epoch_start_time = time.time()
-        try:
-          train()
+        #try:
+        train()
+        '''
         except:
           logging.info('rolling back to the previous best model ...')
           model = torch.load(os.path.join(args.save, 'model.pt'))
@@ -264,7 +265,7 @@ try:
 
           epoch = torch.load(os.path.join(args.save, 'misc.pt'))['epoch']
           continue
-
+        '''
         if 't0' in optimizer.param_groups[0]:
             tmp = {}
             for prm in model.parameters():
