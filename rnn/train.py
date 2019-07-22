@@ -153,7 +153,7 @@ def evaluate(data_source, batch_size=10):
         total_loss += loss * len(data)
 
         hidden = repackage_hidden(hidden)
-    return total_loss / len(data_source)
+    return total_loss[0] / len(data_source)
 
 
 def train():
@@ -213,11 +213,11 @@ def train():
         # total_loss += raw_loss.data
         optimizer.param_groups[0]['lr'] = lr2
 
-        if np.isnan(total_loss.cpu()):
+        if np.isnan(total_loss[0]):
           raise
 
         if batch % args.log_interval == 0 and batch > 0:
-            cur_loss = total_loss / args.log_interval
+            cur_loss = total_loss[0] / args.log_interval
             elapsed = time.time() - start_time
             logging.info('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
@@ -248,9 +248,8 @@ try:
     epoch = 1
     while epoch < args.epochs + 1:
         epoch_start_time = time.time()
-        #try:
-        train()
-        '''
+        try:
+          train()
         except:
           logging.info('rolling back to the previous best model ...')
           model = torch.load(os.path.join(args.save, 'model.pt'))
@@ -265,7 +264,7 @@ try:
 
           epoch = torch.load(os.path.join(args.save, 'misc.pt'))['epoch']
           continue
-        '''
+
         if 't0' in optimizer.param_groups[0]:
             tmp = {}
             for prm in model.parameters():

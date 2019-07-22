@@ -9,12 +9,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from architect import Architect
-from tensorflow.nn import conv2d
+
 import gc
 
 import data
 import model_search as model
-import random
+
 from utils import batchify, get_batch, repackage_hidden, create_exp_dir, save_checkpoint
 
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank/WikiText2 Language Model')
@@ -50,7 +50,7 @@ parser.add_argument('--seed', type=int, default=3,
                     help='random seed')
 parser.add_argument('--nonmono', type=int, default=5,
                     help='random seed')
-parser.add_argument('--cuda', action='store_false', default=True,
+parser.add_argument('--cuda', action='store_false',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                     help='report interval')
@@ -77,10 +77,6 @@ parser.add_argument('--unrolled', action='store_true', default=False, help='use 
 parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
-                    help='learning rate for the architecture encoding alpha')
-parser.add_argument('--sparse_amount', type=float, default=2e-2,
-                    help='learning rate for the architecture encoding alpha')
-parser.add_argument('--orth_amount', type=float, default=1e-4,
                     help='learning rate for the architecture encoding alpha')
 args = parser.parse_args()
 
@@ -144,7 +140,6 @@ if args.cuda:
         parallel_model = nn.DataParallel(model, dim=1).cuda()
 else:
     parallel_model = model
-print(parallel_model.rnns[0]._W0.U.device, parallel_model.rnns[0]._Ws[0].U.device)
 architect = Architect(parallel_model, args)
 
 total_params = sum(x.data.nelement() for x in model.parameters())
@@ -168,7 +163,7 @@ def evaluate(data_source, batch_size=10):
         total_loss += loss * len(data)
 
         hidden = repackage_hidden(hidden)
-    return total_loss / len(data_source)
+    return total_loss[0] / len(data_source)
 
 
 def train():
@@ -220,10 +215,8 @@ def train():
 
             log_prob, hidden[s_id], rnn_hs, dropped_rnn_hs = parallel_model(cur_data, hidden[s_id], return_h=True)
             raw_loss = nn.functional.nll_loss(log_prob.view(-1, log_prob.size(2)), cur_targets)
-            sparse_loss, orth_loss = parallel_model.regular()
-            if random.random() < 0.1:
-                print(sparse_loss, orth_loss, raw_loss)
-            loss = raw_loss + args.sparse_amount * sparse_loss + args.orth_amount * orth_loss
+
+            loss = raw_loss
             # Activiation Regularization
             if args.alpha > 0:
               loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
@@ -248,7 +241,7 @@ def train():
         if batch % args.log_interval == 0 and batch > 0:
             logging.info(parallel_model.genotype())
             print(F.softmax(parallel_model.weights, dim=-1))
-            cur_loss = total_loss / args.log_interval
+            cur_loss = total_loss[0] / args.log_interval
             elapsed = time.time() - start_time
             logging.info('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(

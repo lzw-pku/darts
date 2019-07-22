@@ -25,7 +25,7 @@ class DARTSCellSearch(DARTSCell):
         masked_states = states * h_mask.unsqueeze(0)
       else:
         masked_states = states
-      ch = self._Ws[i](masked_states.view(-1, self.nhid)).view(i+1, -1, 2*self.nhid) # !!!!!!!!!!!!
+      ch = masked_states.view(-1, self.nhid).mm(self._Ws[i]).view(i+1, -1, 2*self.nhid)
       c, h = torch.split(ch, self.nhid, dim=-1)
       c = c.sigmoid()
 
@@ -41,6 +41,7 @@ class DARTSCellSearch(DARTSCell):
       offset += i+1
     output = torch.mean(states[-CONCAT:], dim=0)
     return output
+
 
 class RNNModelSearch(RNNModel):
 

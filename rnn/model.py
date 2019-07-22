@@ -10,49 +10,6 @@ from torch.autograd import Variable
 
 INITRANGE = 0.04
 
-class LinearLowRank(nn.Module):
-    def __init__(self, row, col):
-        torch.nn.Module.__init__(self)
-        rank = min(row, col)
-        self.row = row
-        self.col = col
-        self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
-        self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
-        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE)).cuda()
-
-    def dotg(self, input):
-        pad = torch.zeros(self.row - self.col, dtype=self.sigma.dtype, requires_grad=False).cuda()
-        pad_sig = torch.cat([self.sigma, self.pad])
-        return input * pad_sig
-
-    def dotl(self, input):
-        tmp = (input * self.sigma).view(-1, input.size()[-1])
-        zeros = torch.zeros([tmp.size(0), self.col - self.row]).cuda()
-        pad = torch.cat([tmp, zeros], dim=1)
-        return pad.view(list(input.size())[:-1] + [self.col])
-
-    def dote(self, input):
-        return input * self.sigma
-
-    def forward(self, input):
-        t1 = input.mm(self.U)
-        if self.row > self.col:
-            t2 = self.dotg(t1)
-        elif self.row < self.col:
-            t2 = self.dotl(t1)
-        else:
-            t2 = self.dote(t1)
-        t3 = t2.mm(self.V)
-        return t3
-
-    def sparse(self):
-        return torch.sum(torch.abs(self.sigma))
-
-    def orth(self):
-        def compute(u):
-            return (u.transpose(1, 0).mm(u) - torch.eye(u.size(0)).cuda()).norm(2)
-        return compute(self.U) + compute(self.V)
-        #return (self.U.weight.transpose(1, 0).mm(self.U.weight) - torch.eye(self.U.weight.size(0)).cuda()).norm(2)
 
 class DARTSCell(nn.Module):
 
@@ -65,14 +22,10 @@ class DARTSCell(nn.Module):
 
     # genotype is None when doing arch search
     steps = len(self.genotype.recurrent) if self.genotype is not None else STEPS
-    '''
     self._W0 = nn.Parameter(torch.Tensor(ninp+nhid, 2*nhid).uniform_(-INITRANGE, INITRANGE))
     self._Ws = nn.ParameterList([
         nn.Parameter(torch.Tensor(nhid, 2*nhid).uniform_(-INITRANGE, INITRANGE)) for i in range(steps)
     ])
-    '''
-    self._W0 = LinearLowRank(ninp+nhid, 2*nhid)
-    self._Ws = nn.ModuleList([LinearLowRank(nhid, 2*nhid) for i in range(steps)])
 
   def forward(self, inputs, hidden):
     T, B = inputs.size(0), inputs.size(1)
@@ -89,14 +42,14 @@ class DARTSCell(nn.Module):
       hidden = self.cell(inputs[t], hidden, x_mask, h_mask)
       hiddens.append(hidden)
     hiddens = torch.stack(hiddens)
-    return hiddens, hiddens[-1].unsqueeze(0),
+    return hiddens, hiddens[-1].unsqueeze(0)
 
   def _compute_init_state(self, x, h_prev, x_mask, h_mask):
     if self.training:
       xh_prev = torch.cat([x * x_mask, h_prev * h_mask], dim=-1)
     else:
       xh_prev = torch.cat([x, h_prev], dim=-1)
-    c0, h0 = torch.split(self._W0(xh_prev), self.nhid, dim=-1) # !!!!!!!!!!!!!!!!!!!!!
+    c0, h0 = torch.split(xh_prev.mm(self._W0), self.nhid, dim=-1)
     c0 = c0.sigmoid()
     h0 = h0.tanh()
     s0 = h_prev + c0 * (h0-h_prev)
@@ -122,9 +75,9 @@ class DARTSCell(nn.Module):
     for i, (name, pred) in enumerate(self.genotype.recurrent):
       s_prev = states[pred]
       if self.training:
-        ch = self._Ws[i](s_prev * h_mask)  # !!!!!!!!!!!!!!!!!!
+        ch = (s_prev * h_mask).mm(self._Ws[i])
       else:
-        ch = self._Ws[i](s_prev) # !!!!!!!!!!!!!!!!!!!!!!!!!
+        ch = s_prev.mm(self._Ws[i])
       c, h = torch.split(ch, self.nhid, dim=-1)
       c = c.sigmoid()
       fn = self._get_activation(name)
@@ -134,10 +87,6 @@ class DARTSCell(nn.Module):
     output = torch.mean(torch.stack([states[i] for i in self.genotype.concat], -1), -1)
     return output
 
-  def regular(self):
-      sparse = sum([w.sparse() for w in self._Ws]) + self._W0.sparse()
-      orth = sum([w.orth() for w in self._Ws]) + self._W0.orth()
-      return sparse, orth
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
@@ -209,8 +158,3 @@ class RNNModel(nn.Module):
       weight = next(self.parameters()).data
       return [Variable(weight.new(1, bsz, self.nhid).zero_())]
 
-    def regular(self):
-        s = [cell.regular() for cell in self.rnns]
-        sparse = sum(t[0] for t in s)
-        orth = sum(t[1] for t in s)
-        return sparse, orth
