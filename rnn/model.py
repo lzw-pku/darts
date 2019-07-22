@@ -14,28 +14,34 @@ class LinearLowRank(nn.Module):
     def __init__(self, row, col):
         torch.nn.Module.__init__(self)
         rank = min(row, col)
+        self.row = row
+        self.col = col
         self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
         self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
-        if row > col:
-            self.pad = torch.zeros(row - col, dtype=self.sigma.dtype, requires_grad=False).cuda()
-            def dot(input):
-                pad_sig = torch.cat([self.sigma, self.pad])
-                return input * pad_sig
-            self.dot = dot
-        elif row < col:
-            def dot(input):
-                tmp = (input * self.sigma).view(-1, input.size()[-1])
-                zeros = torch.zeros([tmp.size(0), col - row]).cuda()
-                pad = torch.cat([tmp, zeros], dim=1)
-                return pad.view(list(input.size())[:-1]+[col])
-            self.dot = dot
-        else:
-            self.dot = lambda x: x * self.sigma
         self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE)).cuda()
+
+    def dotg(self, input):
+        pad = torch.zeros(self.row - self.col, dtype=self.sigma.dtype, requires_grad=False).cuda()
+        pad_sig = torch.cat([self.sigma, self.pad])
+        return input * pad_sig
+
+    def dotl(self, input):
+        tmp = (input * self.sigma).view(-1, input.size()[-1])
+        zeros = torch.zeros([tmp.size(0), self.col - self.row]).cuda()
+        pad = torch.cat([tmp, zeros], dim=1)
+        return pad.view(list(input.size())[:-1] + [self.col])
+
+    def dote(self, input):
+        return input * self.sigma
 
     def forward(self, input):
         t1 = input.mm(self.U)
-        t2 = self.dot(t1)
+        if self.row > self.col:
+            t2 = self.dotg(t1)
+        elif self.row < self.col:
+            t2 = self.dotl(t1)
+        else:
+            t2 = self.dote(t1)
         t3 = t2.mm(self.V)
         return t3
 
