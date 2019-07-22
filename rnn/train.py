@@ -213,7 +213,7 @@ def train():
         # total_loss += raw_loss.data
         optimizer.param_groups[0]['lr'] = lr2
 
-        if np.isnan(total_loss):
+        if np.isnan(total_loss.cpu()):
           raise
 
         if batch % args.log_interval == 0 and batch > 0:
