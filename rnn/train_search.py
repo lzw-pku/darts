@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from architect import Architect
-from tensorflow.nn import conv2d
+#from tensorflow.nn import conv2d
 import gc
 
 import data
@@ -78,7 +78,7 @@ parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
                     help='learning rate for the architecture encoding alpha')
-parser.add_argument('--sparse_amount', type=float, default=2e-2,
+parser.add_argument('--sparse_amount', type=float, default=3-4,
                     help='learning rate for the architecture encoding alpha')
 parser.add_argument('--orth_amount', type=float, default=1e-4,
                     help='learning rate for the architecture encoding alpha')
