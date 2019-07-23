@@ -3,6 +3,7 @@ __pycache__/
 .idea/*
 rnn/.idea/
 rnn/.idea/*
+rnn/nohup*
 *.py[cod]
 *$py.class
 
