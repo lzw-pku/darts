@@ -14,7 +14,7 @@ class DARTSCellSearch(DARTSCell):
     self.primbn = nn.BatchNorm1d(nhid, affine=False)
     self.bn = nn.BatchNorm1d(r, affine=False)
 
-  def cell(self, x, h_prev, x_mask, h_mask):
+  def cell(self, x, h_prev, x_mask, h_mask, hr_mask):
     prim, s0 = self._compute_init_state(x, h_prev, x_mask, h_mask)
     prim = self.primbn(prim)
     s0 = self.bn(s0)
@@ -24,11 +24,11 @@ class DARTSCellSearch(DARTSCell):
     states = s0.unsqueeze(0)
     for i in range(STEPS):
       if self.training:
-        masked_states = states * h_mask.unsqueeze(0)
+        masked_states = states * hr_mask.unsqueeze(0)
       else:
         masked_states = states
-      ch = masked_states.view(-1, self.nhid).mm(self._Ws[i]).view(i+1, -1, 2*self.nhid)
-      c, h = torch.split(ch, self.nhid, dim=-1)
+      ch = masked_states.view(-1, self.r).mm(self._Ws[i]).view(i+1, -1, 2*self.r)
+      c, h = torch.split(ch, self.r, dim=-1)
       c = c.sigmoid()
 
       s = torch.zeros_like(s0)

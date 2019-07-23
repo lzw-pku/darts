@@ -16,6 +16,7 @@ class DARTSCell(nn.Module):
   def __init__(self, ninp, nhid, dropouth, dropoutx, genotype, r=50):
     super(DARTSCell, self).__init__()
     self.nhid = nhid
+    self.r = r
     self.dropouth = dropouth
     self.dropoutx = dropoutx
     self.genotype = genotype
@@ -34,13 +35,14 @@ class DARTSCell(nn.Module):
     if self.training:
       x_mask = mask2d(B, inputs.size(2), keep_prob=1.-self.dropoutx)
       h_mask = mask2d(B, hidden.size(2), keep_prob=1.-self.dropouth)
+      hr_mask = mask2d(B, self.r, keep_prob=1.-self.dropouth)
     else:
-      x_mask = h_mask = None
+      x_mask = h_mask = hr_mask = None
 
     hidden = hidden[0]
     hiddens = []
     for t in range(T):
-      hidden = self.cell(inputs[t], hidden, x_mask, h_mask)
+      hidden = self.cell(inputs[t], hidden, x_mask, h_mask, hr_mask)
       hiddens.append(hidden)
     hiddens = torch.stack(hiddens)
     return hiddens, hiddens[-1].unsqueeze(0)
@@ -70,17 +72,17 @@ class DARTSCell(nn.Module):
       raise NotImplementedError
     return f
 
-  def cell(self, x, h_prev, x_mask, h_mask):
+  def cell(self, x, h_prev, x_mask, h_mask, hr_mask):
     prim, s0 = self._compute_init_state(x, h_prev, x_mask, h_mask)
 
     states = [s0]
     for i, (name, pred) in enumerate(self.genotype.recurrent):
       s_prev = states[pred]
       if self.training:
-        ch = (s_prev * h_mask).mm(self._Ws[i])
+        ch = (s_prev * hr_mask).mm(self._Ws[i])
       else:
         ch = s_prev.mm(self._Ws[i])
-      c, h = torch.split(ch, self.nhid, dim=-1)
+      c, h = torch.split(ch, self.r, dim=-1)
       c = c.sigmoid()
       fn = self._get_activation(name)
       h = fn(h)
