@@ -9,12 +9,14 @@ from model import DARTSCell, RNNModel
 
 class DARTSCellSearch(DARTSCell):
 
-  def __init__(self, ninp, nhid, dropouth, dropoutx):
-    super(DARTSCellSearch, self).__init__(ninp, nhid, dropouth, dropoutx, genotype=None)
-    self.bn = nn.BatchNorm1d(nhid, affine=False)
+  def __init__(self, ninp, nhid, dropouth, dropoutx, r=50):
+    super(DARTSCellSearch, self).__init__(ninp, nhid, dropouth, dropoutx, genotype=None, r=50)
+    self.primbn = nn.BatchNorm1d(nhid, affine=False)
+    self.bn = nn.BatchNorm1d(r, affine=False)
 
   def cell(self, x, h_prev, x_mask, h_mask):
-    s0 = self._compute_init_state(x, h_prev, x_mask, h_mask)
+    prim, s0 = self._compute_init_state(x, h_prev, x_mask, h_mask)
+    prim = self.primbn(prim)
     s0 = self.bn(s0)
     probs = F.softmax(self.weights, dim=-1)
 
@@ -40,7 +42,8 @@ class DARTSCellSearch(DARTSCell):
       states = torch.cat([states, s.unsqueeze(0)], 0)
       offset += i+1
     output = torch.mean(states[-CONCAT:], dim=0)
-    return output
+    ret = prim + output.mm(self._bottleoutput)
+    return ret
 
 
 class RNNModelSearch(RNNModel):
