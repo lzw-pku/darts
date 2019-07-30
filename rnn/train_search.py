@@ -78,9 +78,9 @@ parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
                     help='learning rate for the architecture encoding alpha')
-parser.add_argument('--sparse_amount', type=float, default=3-4,
+parser.add_argument('--sparse_amount', type=float, default=1e-5,
                     help='learning rate for the architecture encoding alpha')
-parser.add_argument('--orth_amount', type=float, default=1e-4,
+parser.add_argument('--orth_amount', type=float, default=0,
                     help='learning rate for the architecture encoding alpha')
 args = parser.parse_args()
 
@@ -223,6 +223,11 @@ def train():
             sparse_loss, orth_loss = parallel_model.regular()
             if random.random() < 0.1:
                 print(sparse_loss, orth_loss, raw_loss)
+            if np.isnan(raw_loss) and np.isnan(sparse_loss) and np.isnan(orth_loss):
+              print('!!!!!!!!!!!!!')
+              torch.save(parallel_model, os.path.join('./', 'model.pt'))
+              print(parallel_model.rnns[0]._W0.U, parallel_model.rnns[0]._W0.V, parallel_model.rnns[0]._W0.sigma)
+              exit(-1)
             loss = raw_loss + args.sparse_amount * sparse_loss + args.orth_amount * orth_loss
             # Activiation Regularization
             if args.alpha > 0:
