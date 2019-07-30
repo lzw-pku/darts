@@ -9,29 +9,27 @@ from model import DARTSCell, RNNModel
 
 class DARTSCellSearch(DARTSCell):
 
-  def __init__(self, ninp, nhid, dropouth, dropoutx, r=50):
-    super(DARTSCellSearch, self).__init__(ninp, nhid, dropouth, dropoutx, genotype=None, r=50)
+  def __init__(self, ninp, nhid, dropouth, dropoutx):
+    super(DARTSCellSearch, self).__init__(ninp, nhid, dropouth, dropoutx, genotype=None)
     self.primbn = nn.BatchNorm1d(nhid, affine=False)
-    self.bn = nn.BatchNorm1d(r, affine=False)
 
-  def cell(self, x, h_prev, x_mask, h_mask, hr_mask):
-    prim, s0 = self._compute_init_state(x, h_prev, x_mask, h_mask)
-    prim = self.primbn(prim)
-    s0 = self.bn(s0)
+  def cell(self, x, h_prev, x_mask, h_mask):
+    prim = self._compute_init_state(x, h_prev, x_mask, h_mask)
+    prim = self.bn(prim)
     probs = F.softmax(self.weights, dim=-1)
 
     offset = 0
-    states = s0.unsqueeze(0)
+    states = prim.unsqueeze(0)
     for i in range(STEPS):
       if self.training:
-        masked_states = states * hr_mask.unsqueeze(0)
+        masked_states = states * h_mask.unsqueeze(0)
       else:
         masked_states = states
-      ch = masked_states.view(-1, self.r).mm(self._Ws[i]).view(i+1, -1, 2*self.r)
-      c, h = torch.split(ch, self.r, dim=-1)
+      ch = masked_states.view(-1, self.nhid).mm(self._Ws[i]).view(i+1, -1, 2*self.nhid)
+      c, h = torch.split(ch, self.nhid, dim=-1)
       c = c.sigmoid()
 
-      s = torch.zeros_like(s0)
+      s = torch.zeros_like(prim)
       for k, name in enumerate(PRIMITIVES):
         if name == 'none':
           continue
@@ -42,8 +40,7 @@ class DARTSCellSearch(DARTSCell):
       states = torch.cat([states, s.unsqueeze(0)], 0)
       offset += i+1
     output = torch.mean(states[-CONCAT:], dim=0)
-    ret = prim + output.mm(self._bottleoutput)
-    return ret
+    return output
 
 
 class RNNModelSearch(RNNModel):
