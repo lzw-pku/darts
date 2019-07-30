@@ -78,7 +78,11 @@ parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
 parser.add_argument('--arch_lr', type=float, default=3e-3,
                     help='learning rate for the architecture encoding alpha')
+<<<<<<< HEAD
 parser.add_argument('--sparse_amount', type=float, default=1e-5,
+=======
+parser.add_argument('--sparse_amount', type=float, default=3e-4,
+>>>>>>> 74b75ee9497717b21516ff2a1c0e60f945d18875
                     help='learning rate for the architecture encoding alpha')
 parser.add_argument('--orth_amount', type=float, default=0,
                     help='learning rate for the architecture encoding alpha')
