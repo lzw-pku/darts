@@ -15,7 +15,7 @@ class DARTSCellSearch(DARTSCell):
 
   def cell(self, x, h_prev, x_mask, h_mask):
     prim = self._compute_init_state(x, h_prev, x_mask, h_mask)
-    prim = self.bn(prim)
+    prim = self.primbn(prim)
     probs = F.softmax(self.weights, dim=-1)
 
     offset = 0
