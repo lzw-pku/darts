@@ -21,11 +21,11 @@ from utils import batchify, get_batch, repackage_hidden, create_exp_dir, save_ch
 parser = argparse.ArgumentParser(description='PyTorch PennTreeBank/WikiText2 Language Model')
 parser.add_argument('--data', type=str, default='../data/penn/',
                     help='location of the data corpus')
-parser.add_argument('--emsize', type=int, default=850,
+parser.add_argument('--emsize', type=int, default=900,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=850,
+parser.add_argument('--nhid', type=int, default=900,
                     help='number of hidden units per layer')
-parser.add_argument('--nhidlast', type=int, default=850,
+parser.add_argument('--nhidlast', type=int, default=900,
                     help='number of hidden units for the last rnn layer')
 parser.add_argument('--lr', type=float, default=20,
                     help='initial learning rate')

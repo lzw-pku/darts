@@ -13,7 +13,7 @@ INITRANGE = 0.04
 
 class DARTSCell(nn.Module):
 
-  def __init__(self, ninp, nhid, dropouth, dropoutx, genotype, r=50):
+  def __init__(self, ninp, nhid, dropouth, dropoutx, genotype, r=150):
     super(DARTSCell, self).__init__()
     self.nhid = nhid
     self.r = r
