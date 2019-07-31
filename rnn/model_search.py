@@ -36,7 +36,7 @@ class DARTSCellSearch(DARTSCell):
         fn = self._get_activation(name)
         unweighted = states + c * (fn(h) - states)
         s += torch.sum(probs[offset:offset+i+1, k].unsqueeze(-1).unsqueeze(-1) * unweighted, dim=0)
-      s = self.bn(s)
+      s = self.primbn(s)
       states = torch.cat([states, s.unsqueeze(0)], 0)
       offset += i+1
     output = torch.mean(states[-CONCAT:], dim=0)
