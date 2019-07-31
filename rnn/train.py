@@ -117,6 +117,7 @@ test_data = batchify(corpus.test, test_batch_size, args)
 ntokens = len(corpus.dictionary)
 if args.continue_train:
     model = torch.load(os.path.join(args.save, 'model.pt'))
+    genotype = eval("genotypes.%s" % args.arch)
 else:
     genotype = eval("genotypes.%s" % args.arch)
     model = model.RNNModel(ntokens, args.emsize, args.nhid, args.nhidlast, 
