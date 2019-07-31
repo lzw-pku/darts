@@ -72,7 +72,7 @@ parser.add_argument('--max_seq_len_delta', type=int, default=20,
                     help='max sequence length')
 parser.add_argument('--single_gpu', default=True, action='store_false', 
                     help='use single GPU')
-parser.add_argument('--gpu', type=int, default=0, help='GPU device to use')
+parser.add_argument('--gpu', type=int, default=1, help='GPU device to use')
 parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_wdecay', type=float, default=1e-3,
                     help='weight decay for the architecture encoding alpha')
