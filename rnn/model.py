@@ -18,7 +18,7 @@ class LinearLowRank(nn.Module):
         self.col = col
         self.U = nn.Parameter(torch.Tensor(row, row).uniform_(-INITRANGE, INITRANGE))
         self.sigma = nn.Parameter(torch.Tensor(rank).uniform_(-INITRANGE, INITRANGE))
-        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE)).cuda()
+        self.V = nn.Parameter(torch.Tensor(col, col).uniform_(-INITRANGE, INITRANGE))
 
     def dotg(self, input):
         pad = torch.zeros(self.row - self.col, dtype=self.sigma.dtype, requires_grad=False).cuda()
