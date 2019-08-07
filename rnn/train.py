@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import data
 import model
-
+import random
 from torch.autograd import Variable
 from utils import batchify, get_batch, repackage_hidden, create_exp_dir, save_checkpoint
 
@@ -75,6 +75,13 @@ parser.add_argument('--single_gpu', default=True, action='store_false',
                     help='use single GPU')
 parser.add_argument('--gpu', type=int, default=0, help='GPU device to use')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
+
+
+parser.add_argument('--sparse_amount', type=float, default=1e-3,
+                    help='learning rate for the architecture encoding alpha')
+parser.add_argument('--orth_amount', type=float, default=1e-6,
+                    help='learning rate for the architecture encoding alpha')
+
 args = parser.parse_args()
 
 if args.nhidlast < 0:
@@ -189,8 +196,15 @@ def train():
 
             log_prob, hidden[s_id], rnn_hs, dropped_rnn_hs = parallel_model(cur_data, hidden[s_id], return_h=True)
             raw_loss = nn.functional.nll_loss(log_prob.view(-1, log_prob.size(2)), cur_targets)
-
-            loss = raw_loss
+            sparse_loss, orth_loss = parallel_model.regular()
+            if random.random() < 0.1:
+                print(sparse_loss, orth_loss, raw_loss)
+            if np.isnan(raw_loss) and np.isnan(sparse_loss) and np.isnan(orth_loss):
+              print('!!!!!!!!!!!!!')
+              torch.save(parallel_model, os.path.join('./', 'model.pt'))
+              print(parallel_model.rnns[0]._W0.U, parallel_model.rnns[0]._W0.V, parallel_model.rnns[0]._W0.sigma)
+              exit(-1)
+              loss = raw_loss + args.sparse_amount * sparse_loss + args.orth_amount * orth_loss
             # Activiation Regularization
             if args.alpha > 0:
               loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
